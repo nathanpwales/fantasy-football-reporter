@@ -4,6 +4,7 @@
 
 from sportsreference.nfl.boxscore import Boxscores, Boxscore, BoxscorePlayer, AbstractPlayer
 from sportsreference.nfl.roster import Player
+import sqlite3
 
 # gather the boxscores for a certain week and year
 # will eventually be taken as input
@@ -17,10 +18,19 @@ class OutputPlayer:
 #takes in a BoxscorePlayer and returns an OutputPlayer
 def calcPoints(player):
     curr = Player(player.player_id)
-    test = OutputPlayer(player.name, str(curr('2020').position).upper())
+    #if curr('2020') is not None:
+       # if curr('2020').position is not None:
+    try:
+        test = OutputPlayer(player.name, str(curr('2020').position).upper())
+    except:
+        return None 
+       # else :
+           # return None
+    #else :
+      #  return None
     testString = ""
 
-    result = player.receiving_yards
+    result = player.receiving_yards                                                                                            
     if result is not None:
         test.points += ((float(result)) * .1)
     testString += str(result) + " "
@@ -100,19 +110,22 @@ def calcPoints(player):
             test.points += ((float(result-made)) * -1)
     testString += str(result) + " "
 
-    #Points missing
-    # 2 point conversion (passing, receiving, rushing)
-    # differnet points for field goals
-
-    
-
     test.points = round(test.points, 2)
     
     #print(testString)
     return test
 
+def insertOutputPlayer(out_player):
+    c.execute("INSERT INTO players VAlUES (:name, :position, :points)", 
+    (out_player.name, out_player.position, out_player.points))
 
 games = Boxscores(16, 2020)
+conn = sqlite3.connect('playerPointDatabase2020.db')
+c = conn.cursor()
+
+c.execute("DELETE FROM players")
+
+
 
 games_dic = games.games
 for game in games_dic['16-2020']:
@@ -120,11 +133,18 @@ for game in games_dic['16-2020']:
     home_players = curr_game.home_players
     for player in home_players:
         test = calcPoints(player)
-        if test.points != 0.0:
-            print(test.name + " " + str(test.position) + ": " + str(test.points) + "\n")
+        if test is not None:
+            if test.points != 0.0:
+                insertOutputPlayer(test)
+                print(test.name + " " + str(test.position) + ": " + str(test.points) + "\n")
     
     away_players = curr_game.away_players
-    for player in away_players:
+    for player in away_players: 
         test = calcPoints(player)
-        if test.points != 0.0:
-            print(test.name + " " + str(test.position) + ": " + str(test.points) + "\n")
+        if test is not None:
+            if test.points != 0.0:
+                insertOutputPlayer(test)
+        #    print(test.name + " " + str(test.position) + ": " + str(test.points) + "\n")
+
+conn.commit()
+conn.close()
